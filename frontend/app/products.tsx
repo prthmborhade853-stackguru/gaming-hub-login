@@ -1,136 +1,147 @@
 
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
 
 const products = [
-  {
-    id: 1,
-    name: "RGB Mechanical Keyboard",
-    category: "Keyboard",
-    price: 2499,
-    icon: "⌨️",
-    description: "Mechanical keys with RGB lighting",
-    tag: "Best Seller",
-  },
-  {
-    id: 2,
-    name: "Wireless Gaming Mouse",
-    category: "Mouse",
-    price: 1299,
-    icon: "🖱️",
-    description: "High precision gaming sensor",
-    tag: "Popular",
-  },
-  {
-    id: 3,
-    name: "Gaming Headset",
-    category: "Headset",
-    price: 1999,
-    icon: "🎧",
-    description: "Immersive sound with clear mic",
-    tag: "New",
-  },
-  {
-    id: 4,
-    name: "Wireless Gaming Controller",
-    category: "Controller",
-    price: 2999,
-    icon: "🎮",
-    description: "Comfortable wireless gameplay",
-    tag: "Trending",
-  },
-  {
-    id: 5,
-    name: "Gaming Mouse Pad",
-    category: "Accessories",
-    price: 599,
-    icon: "🖥️",
-    description: "Large smooth gaming surface",
-    tag: "Value Pick",
-  },
-  {
-    id: 6,
-    name: "Gaming Speakers",
-    category: "Accessories",
-    price: 1799,
-    icon: "🔊",
-    description: "Powerful stereo gaming audio",
-    tag: "Featured",
-  },
+  { id: 1, name: "Wireless Gaming Controller", category: "Controllers", price: 2499, icon: "🎮", tag: "BESTSELLER" },
+  { id: 2, name: "RGB Mechanical Keyboard", category: "Keyboards", price: 1999, icon: "⌨️", tag: "POPULAR" },
+  { id: 3, name: "Pro Gaming Headset", category: "Headsets", price: 1799, icon: "🎧", tag: "NEW" },
+  { id: 4, name: "Precision Gaming Mouse", category: "Mice", price: 999, icon: "🖱️", tag: "HOT" },
+  { id: 5, name: "RGB Gaming Mousepad", category: "Accessories", price: 699, icon: "🟪", tag: "TRENDING" },
+  { id: 6, name: "Pro Wireless Controller", category: "Controllers", price: 3299, icon: "🕹️", tag: "PRO" },
+];
+
+const categories = [
+  "All", "Controllers", "Keyboards",
+  "Headsets", "Mice", "Accessories"
 ];
 
 export default function ProductsPage() {
-  return (
-    <main className="min-h-screen bg-[#080b14] text-white px-6 py-10">
-      <div className="max-w-7xl mx-auto">
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("All");
 
-        <Link
-          href="/"
-          className="text-cyan-400 hover:text-white"
-        >
-          ← Back to Home
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      const matchesSearch = product.name
+        .toLowerCase()
+        .includes(search.toLowerCase());
+
+      const matchesCategory =
+        category === "All" || product.category === category;
+
+      return matchesSearch && matchesCategory;
+    });
+  }, [search, category]);
+
+  function addToCart(productId: number) {
+    const existing = JSON.parse(
+      localStorage.getItem("gamingHubCart") || "[]"
+    );
+
+    existing.push(productId);
+
+    localStorage.setItem(
+      "gamingHubCart",
+      JSON.stringify(existing)
+    );
+
+    alert("Product added to cart successfully!");
+  }
+
+  return (
+    <main className="products-page">
+
+      <div className="page-topbar">
+        <Link href="/" className="brand">
+          <span>GAMING</span> HUB<span className="brand-dot">.</span>
         </Link>
 
-        <div className="mt-8 mb-10">
-          <p className="text-cyan-400 font-semibold">
-            GAMING HUB STORE
-          </p>
-
-          <h1 className="text-4xl font-bold mt-2">
-            Gaming Products
-          </h1>
-
-          <p className="text-gray-400 mt-3">
-            Explore the best gaming peripherals
-            for your gaming setup.
-          </p>
+        <div className="nav-actions">
+          <Link href="/" className="back-link">← Home</Link>
+          <Link href="/cart" className="cart-button">
+            🛒 My Cart
+          </Link>
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7">
+      <section>
+        <span className="eyebrow">GAMING HUB STORE</span>
 
-          {products.map((product) => (
-            <div
-              key={product.id}
-              className="bg-[#111827] border border-gray-800 rounded-2xl p-6 hover:border-cyan-400 transition"
-            >
-              <div className="h-44 bg-[#1c2638] rounded-xl flex items-center justify-center text-7xl">
-                {product.icon}
-              </div>
+        <h1 className="page-title">
+          Explore Gaming Gear<span className="brand-dot">.</span>
+        </h1>
 
-              <div className="mt-5">
-                <span className="text-xs text-cyan-400">
-                  {product.tag}
-                </span>
+        <p className="page-description">
+          Discover premium gaming controllers, keyboards,
+          headsets and accessories for your ultimate setup.
+        </p>
+      </section>
 
-                <p className="text-gray-400 text-sm mt-2">
-                  {product.category}
-                </p>
+      <div className="page-category-list">
+        {categories.map((item) => (
+          <button
+            key={item}
+            className={`category-chip ${
+              category === item ? "active" : ""
+            }`}
+            onClick={() => setCategory(item)}
+          >
+            {item}
+          </button>
+        ))}
+      </div>
 
-                <h2 className="text-xl font-bold mt-1">
-                  {product.name}
-                </h2>
+      <input
+        className="page-search"
+        type="search"
+        placeholder="⌕ Search gaming products..."
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+      />
 
-                <p className="text-gray-400 text-sm mt-2">
-                  {product.description}
-                </p>
+      <section className="product-grid">
+        {filteredProducts.map((product) => (
+          <article className="product-card" key={product.id}>
 
-                <div className="flex justify-between items-center mt-5">
-                  <span className="text-2xl font-bold text-cyan-400">
-                    ₹{product.price.toLocaleString("en-IN")}
-                  </span>
+            <div className="product-art">
+              <span className="product-tag">{product.tag}</span>
+              <span className="product-emoji">{product.icon}</span>
+              <span className="art-label">GAMING HUB</span>
+            </div>
 
-                  <button className="bg-cyan-500 text-black px-4 py-2 rounded-lg font-semibold">
-                    Add to Cart
-                  </button>
-                </div>
+            <div className="product-info">
+              <span className="product-category">
+                {product.category}
+              </span>
+
+              <h3>{product.name}</h3>
+
+              <div className="product-details">
+                <strong className="product-price">
+                  ₹{product.price.toLocaleString("en-IN")}
+                </strong>
+
+                <button
+                  className="add-button"
+                  onClick={() => addToCart(product.id)}
+                >
+                  + Add to Cart
+                </button>
               </div>
             </div>
-          ))}
 
-        </div>
+          </article>
+        ))}
+      </section>
 
-      </div>
+      {filteredProducts.length === 0 && (
+        <p className="empty-state">
+          No products found. Try another search.
+        </p>
+      )}
+
     </main>
   );
 }
