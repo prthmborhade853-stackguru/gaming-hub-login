@@ -1,136 +1,357 @@
 
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
 
 const products = [
   {
     id: 1,
-    name: "RGB Mechanical Keyboard",
-    category: "Keyboard",
+    name: "Wireless Gaming Controller",
+    category: "Controllers",
     price: 2499,
-    icon: "⌨️",
-    description: "Mechanical keys with RGB lighting",
-    tag: "Best Seller",
+    icon: "🎮",
+    tag: "BESTSELLER",
   },
   {
     id: 2,
-    name: "Wireless Gaming Mouse",
-    category: "Mouse",
-    price: 1299,
-    icon: "🖱️",
-    description: "High precision gaming sensor",
-    tag: "Popular",
+    name: "RGB Mechanical Keyboard",
+    category: "Keyboards",
+    price: 1999,
+    icon: "⌨️",
+    tag: "POPULAR",
   },
   {
     id: 3,
-    name: "Gaming Headset",
-    category: "Headset",
-    price: 1999,
+    name: "Pro Gaming Headset",
+    category: "Headsets",
+    price: 1799,
     icon: "🎧",
-    description: "Immersive sound with clear mic",
-    tag: "New",
+    tag: "NEW",
   },
   {
     id: 4,
-    name: "Wireless Gaming Controller",
-    category: "Controller",
-    price: 2999,
-    icon: "🎮",
-    description: "Comfortable wireless gameplay",
-    tag: "Trending",
+    name: "Precision Gaming Mouse",
+    category: "Mice",
+    price: 999,
+    icon: "🖱️",
+    tag: "HOT",
   },
   {
     id: 5,
-    name: "Gaming Mouse Pad",
+    name: "RGB Gaming Mousepad",
     category: "Accessories",
-    price: 599,
-    icon: "🖥️",
-    description: "Large smooth gaming surface",
-    tag: "Value Pick",
+    price: 699,
+    icon: "🟪",
+    tag: "TRENDING",
   },
   {
     id: 6,
-    name: "Gaming Speakers",
-    category: "Accessories",
-    price: 1799,
-    icon: "🔊",
-    description: "Powerful stereo gaming audio",
-    tag: "Featured",
+    name: "Pro Wireless Controller",
+    category: "Controllers",
+    price: 3299,
+    icon: "🕹️",
+    tag: "PRO",
   },
 ];
 
-export default function ProductsPage() {
-  return (
-    <main className="min-h-screen bg-[#080b14] text-white px-6 py-10">
-      <div className="max-w-7xl mx-auto">
+const categories = [
+  "All",
+  "Controllers",
+  "Keyboards",
+  "Headsets",
+  "Mice",
+  "Accessories",
+];
 
-        <Link
-          href="/"
-          className="text-cyan-400 hover:text-white"
-        >
-          ← Back to Home
+export default function HomePage() {
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("All");
+  const [cart, setCart] = useState<number[]>([]);
+
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      const matchesSearch = product.name
+        .toLowerCase()
+        .includes(search.toLowerCase());
+
+      const matchesCategory =
+        category === "All" || product.category === category;
+
+      return matchesSearch && matchesCategory;
+    });
+  }, [search, category]);
+
+  return (
+    <main className="site" id="home">
+
+      {/* NAVBAR */}
+      <header className="navbar">
+
+        <Link href="/" className="brand">
+          <span>GAMING</span> HUB
+          <span className="brand-dot">.</span>
         </Link>
 
-        <div className="mt-8 mb-10">
-          <p className="text-cyan-400 font-semibold">
-            GAMING HUB STORE
-          </p>
+        <nav className="nav-links">
+          <Link href="/">Home</Link>
+          <Link href="/#categories">Categories</Link>
+          <Link href="/products">Products</Link>
+        </nav>
 
-          <h1 className="text-4xl font-bold mt-2">
-            Gaming Products
+        <div className="nav-actions">
+
+          <Link href="/login" className="login-button">
+            Login
+          </Link>
+
+          <Link href="/register" className="login-button">
+            Register
+          </Link>
+
+          <Link href="/cart" className="cart-button">
+            🛒 Cart ({cart.length})
+          </Link>
+
+        </div>
+      </header>
+
+      {/* HERO SECTION */}
+      <section className="hero">
+
+        <div className="hero-copy">
+
+          <span className="eyebrow">
+            ⚡ THE ULTIMATE GAMING STORE
+          </span>
+
+          <h1>
+            LEVEL UP
+            <br />
+            YOUR <span>GAME.</span>
           </h1>
 
-          <p className="text-gray-400 mt-3">
-            Explore the best gaming peripherals
-            for your gaming setup.
+          <p>
+            Discover powerful controllers, precision peripherals and
+            next-level gaming accessories. Your next victory starts here.
           </p>
+
+          <Link href="/products" className="primary-button">
+            Explore Gear ↗
+          </Link>
+
+          <div className="hero-stats">
+            <div>
+              <strong>50+</strong>
+              <small>Gaming products</small>
+            </div>
+
+            <div>
+              <strong>Pro</strong>
+              <small>Gaming essentials</small>
+            </div>
+
+            <div>
+              <strong>24/7</strong>
+              <small>Gaming mode</small>
+            </div>
+          </div>
+
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7">
+        <div className="hero-art">
 
-          {products.map((product) => (
-            <div
-              key={product.id}
-              className="bg-[#111827] border border-gray-800 rounded-2xl p-6 hover:border-cyan-400 transition"
+          <div className="hero-glow" />
+
+          <span className="hero-controller">
+            🎮
+          </span>
+
+          <span className="floating-chip chip-one">
+            ⚡ PERFORMANCE
+          </span>
+
+          <span className="floating-chip chip-two">
+            ✦ LEVEL UP
+          </span>
+
+          <div className="hero-art-caption">
+            BUILT FOR THE NEXT LEVEL
+          </div>
+
+        </div>
+      </section>
+
+      {/* CATEGORY SECTION */}
+      <section id="categories" className="section">
+
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">
+              FIND YOUR EDGE
+            </span>
+
+            <h2>Shop by Category</h2>
+          </div>
+        </div>
+
+        <div className="category-list">
+
+          {categories.map((item) => (
+            <button
+              key={item}
+              onClick={() => {
+                setCategory(item);
+
+                document
+                  .getElementById("products")
+                  ?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className={`category-chip ${
+                category === item ? "active" : ""
+              }`}
             >
-              <div className="h-44 bg-[#1c2638] rounded-xl flex items-center justify-center text-7xl">
-                {product.icon}
-              </div>
+              {item}
+            </button>
+          ))}
 
-              <div className="mt-5">
-                <span className="text-xs text-cyan-400">
+        </div>
+      </section>
+
+      {/* PRODUCTS SECTION */}
+      <section id="products" className="section products-section">
+
+        <div className="section-heading products-heading">
+
+          <div>
+            <span className="eyebrow">
+              UPGRADE YOUR SETUP
+            </span>
+
+            <h2>
+              Featured Products
+              <span className="brand-dot">.</span>
+            </h2>
+
+            <p className="muted">
+              {filteredProducts.length} products available
+            </p>
+          </div>
+
+          <input
+            className="search-input"
+            type="search"
+            placeholder="⌕ Search gaming gear..."
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            aria-label="Search products"
+          />
+
+        </div>
+
+        <div className="product-grid">
+
+          {filteredProducts.map((product) => (
+
+            <article className="product-card" key={product.id}>
+
+              <div className="product-art">
+
+                <span className="product-tag">
                   {product.tag}
                 </span>
 
-                <p className="text-gray-400 text-sm mt-2">
+                <span className="product-emoji">
+                  {product.icon}
+                </span>
+
+                <span className="art-label">
+                  GAMING HUB
+                </span>
+
+              </div>
+
+              <div className="product-info">
+
+                <span className="product-category">
                   {product.category}
-                </p>
+                </span>
 
-                <h2 className="text-xl font-bold mt-1">
-                  {product.name}
-                </h2>
+                <h3>{product.name}</h3>
 
-                <p className="text-gray-400 text-sm mt-2">
-                  {product.description}
-                </p>
+                <div className="product-bottom">
 
-                <div className="flex justify-between items-center mt-5">
-                  <span className="text-2xl font-bold text-cyan-400">
+                  <strong>
                     ₹{product.price.toLocaleString("en-IN")}
-                  </span>
+                  </strong>
 
-                  <button className="bg-cyan-500 text-black px-4 py-2 rounded-lg font-semibold">
-                    Add to Cart
+                  <button
+                    className="add-button"
+                    onClick={() =>
+                      setCart((current) => [
+                        ...current,
+                        product.id,
+                      ])
+                    }
+                  >
+                    + Add
                   </button>
+
                 </div>
               </div>
-            </div>
+
+            </article>
+
           ))}
 
         </div>
 
-      </div>
+        {filteredProducts.length === 0 && (
+          <p className="empty-state">
+            No products found. Try another search.
+          </p>
+        )}
+
+      </section>
+
+      {/* CTA SECTION */}
+      <section className="cta-section">
+
+        <span className="eyebrow">
+          READY PLAYER ONE?
+        </span>
+
+        <h2>Your setup. Your rules.</h2>
+
+        <p>
+          Find your next favourite piece of gaming gear.
+        </p>
+
+        <Link href="/register" className="primary-button">
+          Join Gaming Hub ↗
+        </Link>
+
+      </section>
+
+      {/* FOOTER */}
+      <footer className="footer">
+
+        <Link href="/" className="brand">
+          <span>GAMING</span> HUB.
+        </Link>
+
+        <p>
+          © 2026 Gaming Hub · Built for gamers.
+        </p>
+
+        <div className="footer-links">
+          <Link href="/products">Products</Link>
+          <Link href="/login">Sign in</Link>
+          <Link href="/register">Register</Link>
+        </div>
+
+      </footer>
+
     </main>
   );
 }
