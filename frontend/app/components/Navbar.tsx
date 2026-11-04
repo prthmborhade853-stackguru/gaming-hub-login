@@ -23,19 +23,22 @@ export default function Navbar() {
 
   return (
     <>
-      <aside
-        className={`gaming-navbar ${open ? "open" : ""}`}
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
+      <button
+        className="menu-toggle"
+        onClick={() => setOpen(!open)}
+        aria-label="Toggle navigation"
+        aria-expanded={open}
       >
-        <button
-          className="menu-toggle"
-          onClick={() => setOpen(!open)}
-          aria-label="Toggle navigation menu"
-          aria-expanded={open}
-        >
+        <span className={open ? "line line1 active" : "line line1"} />
+        <span className={open ? "line line2 active" : "line line2"} />
+        <span className={open ? "line line3 active" : "line line3"} />
+      </button>
+
+      <aside className={`gaming-navbar ${open ? "open" : ""}`}>
+        <div className="nav-heading">
           <span>🎮</span>
-        </button>
+          <strong>GAMING HUB</strong>
+        </div>
 
         <nav className="nav-menu">
           {navItems.map((item) => (
@@ -48,116 +51,150 @@ export default function Navbar() {
               onClick={() => setOpen(false)}
             >
               <span className="nav-icon">{item.icon}</span>
-              <span className="nav-label">{item.name}</span>
+              <span>{item.name}</span>
             </Link>
           ))}
         </nav>
       </aside>
 
+      {open && (
+        <button
+          className="nav-overlay"
+          aria-label="Close navigation"
+          onClick={() => setOpen(false)}
+        />
+      )}
+
       <style jsx global>{`
-        .gaming-navbar {
-          position: fixed;
-          top: 50%;
-          left: 15px;
-          transform: translateY(-50%);
-          width: 58px;
-          height: 58px;
-          padding: 6px;
-          background: rgba(12, 15, 35, 0.97);
-          border: 1px solid #00d9ff;
-          border-radius: 50px;
-          box-shadow: 0 0 15px #00d9ff88;
-          z-index: 9999;
-          overflow: hidden;
-          transition: width 0.4s ease, height 0.4s ease,
-            border-radius 0.4s ease, box-shadow 0.3s ease;
-        }
-
-        .gaming-navbar.open {
-          width: 225px;
-          height: min(550px, 85vh);
-          border-radius: 18px;
-          box-shadow: 0 0 25px #00d9ff, 0 0 45px #8a2be255;
-        }
-
         .menu-toggle {
+          position: fixed;
+          top: 20px;
+          left: 20px;
+          width: 52px;
+          height: 52px;
+          z-index: 10002;
           display: flex;
+          flex-direction: column;
           align-items: center;
           justify-content: center;
-          width: 44px;
-          height: 44px;
-          border: none;
-          border-radius: 50%;
-          background: #101a35;
-          color: white;
+          gap: 6px;
+          border: 1px solid #00d9ff;
+          border-radius: 13px;
+          background: #10152d;
           cursor: pointer;
-          font-size: 25px;
+          box-shadow: 0 0 15px #00d9ff66;
           transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
 
         .menu-toggle:hover {
-          transform: scale(1.12);
-          box-shadow: 0 0 18px #00d9ff;
+          transform: scale(1.08);
+          box-shadow: 0 0 22px #00d9ff;
+        }
+
+        .line {
+          display: block;
+          width: 24px;
+          height: 2.5px;
+          border-radius: 5px;
+          background: #00eaff;
+          transition: all 0.3s ease;
+        }
+
+        .line1.active {
+          transform: translateY(8.5px) rotate(45deg);
+        }
+
+        .line2.active {
+          opacity: 0;
+        }
+
+        .line3.active {
+          transform: translateY(-8.5px) rotate(-45deg);
+        }
+
+        .gaming-navbar {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 270px;
+          height: 100vh;
+          padding: 90px 18px 25px;
+          background: rgba(10, 14, 34, 0.98);
+          border-right: 1px solid #00d9ff;
+          box-shadow: 5px 0 30px #00d9ff33;
+          z-index: 10000;
+          overflow-y: auto;
+          transform: translateX(-110%);
+          transition: transform 0.4s ease;
+        }
+
+        .gaming-navbar.open {
+          transform: translateX(0);
+        }
+
+        .nav-heading {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 10px;
+          margin-bottom: 20px;
+          color: #00eaff;
+          font-size: 18px;
+          letter-spacing: 1px;
+        }
+
+        .nav-heading span {
+          font-size: 26px;
         }
 
         .nav-menu {
           display: flex;
           flex-direction: column;
-          gap: 7px;
-          margin-top: 15px;
-          opacity: 0;
-          visibility: hidden;
-          transform: translateX(-20px);
-          transition: all 0.3s ease;
-        }
-
-        .gaming-navbar.open .nav-menu {
-          opacity: 1;
-          visibility: visible;
-          transform: translateX(0);
+          gap: 10px;
         }
 
         .nav-item {
           display: flex;
           align-items: center;
-          gap: 14px;
-          min-height: 42px;
-          padding: 9px;
-          border-radius: 11px;
-          color: #c9d5e8;
+          gap: 15px;
+          padding: 13px;
+          color: #d0d9ec;
+          border: 1px solid transparent;
+          border-radius: 12px;
           text-decoration: none;
-          white-space: nowrap;
-          transition: all 0.3s ease;
+          transition: all 0.25s ease;
         }
 
         .nav-icon {
-          min-width: 27px;
-          text-align: center;
-          font-size: 20px;
-        }
-
-        .nav-label {
-          font-size: 14px;
+          font-size: 21px;
         }
 
         .nav-item:hover {
           color: white;
-          background: #00d9ff25;
-          transform: scale(1.06);
-          box-shadow: 0 0 12px #00d9ff99;
+          background: #00d9ff20;
+          border-color: #00d9ff;
+          transform: scale(1.04);
+          box-shadow: 0 0 14px #00d9ff88;
         }
 
         .nav-item.active {
           color: #00eaff;
           background: #00d9ff20;
-          box-shadow: inset 0 0 10px #00d9ff44;
+          border-color: #00d9ff88;
         }
 
-        @media (max-width: 700px) {
+        .nav-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 9998;
+          border: none;
+          background: rgba(0, 0, 0, 0.35);
+          cursor: pointer;
+        }
+
+        @media (max-width: 600px) {
           .gaming-navbar {
-            top: 15px;
-            left: 15px;
-            transform: none;
+            width: min(270px, 82vw);
           }
         }
       `}</style>
