@@ -1,5 +1,6 @@
 
 const path = require("path");
+const orderRoutes = require("./routes/orders");
 
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 
@@ -14,6 +15,7 @@ app.use(cors({
 }));
 
 app.use(express.json());
+app.use("/api/orders", orderRoutes);
 
 app.get("/", (req, res) => {
   res.send("Gaming Hub API is running!");
