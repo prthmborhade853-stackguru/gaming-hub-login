@@ -1,7 +1,14 @@
 
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -20,7 +27,9 @@ export default function CheckoutPage() {
   const [cart, setCart] = useState<number[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [placed, setPlaced] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [orderId, setOrderId] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const [form, setForm] = useState({
     fullName: "",
@@ -32,6 +41,7 @@ export default function CheckoutPage() {
     pincode: "",
   });
 
+  // Load cart from browser storage
   useEffect(() => {
     try {
       const saved = JSON.parse(
@@ -54,6 +64,7 @@ export default function CheckoutPage() {
     setLoaded(true);
   }, []);
 
+  // Calculate cart products and quantities
   const cartItems = useMemo(() => {
     return products
       .map((product) => ({
@@ -69,7 +80,7 @@ export default function CheckoutPage() {
   );
 
   function handleChange(
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) {
     const { name, value } = event.target;
 
@@ -77,52 +88,91 @@ export default function CheckoutPage() {
       ...previous,
       [name]: value,
     }));
+
+    setErrorMessage("");
   }
 
-  function placeOrder(event: React.FormEvent<HTMLFormElement>) {
+  // Submit order to Express backend and MongoDB
+  async function placeOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    if (submitting) return;
+
     if (cartItems.length === 0) {
-      alert("Your cart is empty!");
-      router.push("/products");
+      setErrorMessage("Your cart is empty!");
       return;
     }
 
-    const newOrderId = "GH" + Date.now().toString().slice(-8);
+    setSubmitting(true);
+    setErrorMessage("");
 
-    const order = {
-      orderId: newOrderId,
-      customer: form,
-      products: cartItems,
-      totalAmount: total,
-      paymentMethod: "Cash on Delivery",
-      status: "Placed",
-      orderDate: new Date().toISOString(),
-    };
+    try {
+      const API_URL =
+        process.env.NEXT_PUBLIC_API_URL ||
+        "http://localhost:5001/api";
 
-    const previousOrders = JSON.parse(
-      localStorage.getItem("gamingHubOrders") || "[]"
-    );
+      const response = await fetch(`${API_URL}/orders`, {
+        method: "POST",
 
-    localStorage.setItem(
-      "gamingHubOrders",
-      JSON.stringify([...previousOrders, order])
-    );
+        headers: {
+          "Content-Type": "application/json",
+        },
 
-    localStorage.removeItem("gamingHubCart");
+        body: JSON.stringify({
+          customer: form,
 
-    setOrderId(newOrderId);
-    setPlaced(true);
+          products: cartItems.map((product) => ({
+            productId: product.id,
+            quantity: product.quantity,
+          })),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Unable to place your order."
+        );
+      }
+
+      if (!data.orderId) {
+        throw new Error(
+          "The server did not return an order ID."
+        );
+      }
+
+      // Clear cart only after successful backend response
+      localStorage.removeItem("gamingHubCart");
+
+      setCart([]);
+      setOrderId(data.orderId);
+      setPlaced(true);
+
+    } catch (error) {
+      console.error("Checkout error:", error);
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong. Please try again."
+      );
+
+    } finally {
+      setSubmitting(false);
+    }
   }
 
+  // Loading screen
   if (!loaded) {
     return (
       <main className="checkout-page">
-        Loading checkout...
+        <p>Loading checkout...</p>
       </main>
     );
   }
 
+  // Order success screen
   if (placed) {
     return (
       <main className="checkout-page">
@@ -163,6 +213,7 @@ export default function CheckoutPage() {
           .order-number {
             color: #38e8f5;
             font-weight: bold;
+            overflow-wrap: anywhere;
           }
 
           .success-card a {
@@ -184,11 +235,12 @@ export default function CheckoutPage() {
 
           <p>
             Thank you for shopping with Gaming Hub.
-            Your order has been saved.
+            Your order has been saved successfully.
           </p>
 
           <p>
-            Order ID: <span className="order-number">{orderId}</span>
+            Order ID:{" "}
+            <span className="order-number">{orderId}</span>
           </p>
 
           <p>Payment Method: Cash on Delivery</p>
@@ -199,9 +251,36 @@ export default function CheckoutPage() {
     );
   }
 
+  // Empty cart screen
   if (cartItems.length === 0) {
     return (
       <main className="checkout-page">
+        <style jsx>{`
+          .checkout-page {
+            min-height: 100vh;
+            padding: 50px 7%;
+            background: #080b14;
+            color: #f5f7ff;
+          }
+
+          .empty-checkout {
+            text-align: center;
+            padding: 80px 20px;
+            background: #111725;
+            border-radius: 15px;
+          }
+
+          .empty-checkout p {
+            color: #9ba6bb;
+          }
+
+          .empty-checkout a {
+            display: inline-block;
+            margin-top: 15px;
+            color: #38e8f5;
+          }
+        `}</style>
+
         <div className="empty-checkout">
           <h1>Your Cart is Empty 🛒</h1>
           <p>Add products before proceeding to checkout.</p>
@@ -412,28 +491,27 @@ export default function CheckoutPage() {
           opacity: .85;
         }
 
+        .place-order-button:disabled {
+          opacity: .6;
+          cursor: not-allowed;
+        }
+
+        .error-message {
+          margin-top: 15px;
+          padding: 12px;
+          border: 1px solid #ff8299;
+          border-radius: 8px;
+          color: #ff9bad;
+          background: rgba(255,130,153,.08);
+          font-size: 13px;
+          line-height: 1.5;
+        }
+
         .secure-note {
           text-align: center;
           color: #9ba6bb;
           font-size: 12px;
           margin-top: 15px;
-        }
-
-        .empty-checkout {
-          text-align: center;
-          padding: 80px 20px;
-          background: #111725;
-          border-radius: 15px;
-        }
-
-        .empty-checkout p {
-          color: #9ba6bb;
-        }
-
-        .empty-checkout a {
-          display: inline-block;
-          margin-top: 15px;
-          color: #38e8f5;
         }
 
         @media (max-width: 850px) {
@@ -499,6 +577,7 @@ export default function CheckoutPage() {
                 placeholder="Enter your full name"
                 value={form.fullName}
                 onChange={handleChange}
+                maxLength={100}
                 required
               />
             </div>
@@ -536,6 +615,7 @@ export default function CheckoutPage() {
                 placeholder="House number, street, area..."
                 value={form.address}
                 onChange={handleChange}
+                maxLength={500}
                 required
               />
             </div>
@@ -582,7 +662,9 @@ export default function CheckoutPage() {
 
           <div className="payment-option">
             <strong>💵 Cash on Delivery (COD)</strong>
-            <p>Pay for your order when it arrives at your doorstep.</p>
+            <p>
+              Pay for your order when it arrives at your doorstep.
+            </p>
           </div>
         </section>
 
@@ -592,7 +674,9 @@ export default function CheckoutPage() {
           {cartItems.map((product) => (
             <div className="order-product" key={product.id}>
               <div className="product-name">
-                <span className="product-icon">{product.icon}</span>
+                <span className="product-icon">
+                  {product.icon}
+                </span>
 
                 <div>
                   <strong>{product.name}</strong>
@@ -601,7 +685,9 @@ export default function CheckoutPage() {
               </div>
 
               <strong>
-                ₹{(product.price * product.quantity).toLocaleString("en-IN")}
+                ₹{(
+                  product.price * product.quantity
+                ).toLocaleString("en-IN")}
               </strong>
             </div>
           ))}
@@ -626,12 +712,22 @@ export default function CheckoutPage() {
             <strong>₹{total.toLocaleString("en-IN")}</strong>
           </div>
 
-          <button type="submit" className="place-order-button">
-            Place Order →
+          {errorMessage && (
+            <div className="error-message" role="alert">
+              {errorMessage}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            className="place-order-button"
+            disabled={submitting}
+          >
+            {submitting ? "Placing Order..." : "Place Order →"}
           </button>
 
           <p className="secure-note">
-            🔒 Your order details are stored in this browser for this demo.
+            🔒 Your order is submitted securely to the Gaming Hub backend.
           </p>
         </aside>
 
