@@ -1,12 +1,13 @@
 
 const path = require("path");
-const orderRoutes = require("./routes/orders");
-
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+
+const orderRoutes = require("./routes/orders");
+const authRoutes = require("./routes/auth");
 
 const app = express();
 
@@ -15,16 +16,17 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
 app.use("/api/orders", orderRoutes);
+app.use("/api/auth", authRoutes);
 
 app.get("/", (req, res) => {
   res.send("Gaming Hub API is running!");
 });
+
 app.get("/api/health", (req, res) => {
   res.json({ message: "Gaming Hub API is running" });
 });
-
-app.use("/api/auth", require("./routes/auth"));
 
 async function startServer() {
   try {
@@ -33,13 +35,15 @@ async function startServer() {
     }
 
     await mongoose.connect(process.env.MONGODB_URI);
+
     console.log("MongoDB connected successfully");
 
-    const port = process.env.PORT || 5000;
+    const port = process.env.PORT || 5001;
 
     app.listen(port, () => {
       console.log(`Backend running at http://localhost:${port}`);
     });
+
   } catch (error) {
     console.error("Startup failed:", error.message);
     process.exit(1);
