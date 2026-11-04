@@ -19,17 +19,22 @@ const navItems = [
 
 export default function Navbar() {
   const pathname = usePathname();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [open, setOpen] = useState(false);
 
   return (
     <>
-      <aside className={`gaming-navbar ${mobileOpen ? "mobile-open" : ""}`}>
+      <aside
+        className={`gaming-navbar ${open ? "open" : ""}`}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+      >
         <button
-          className="nav-logo"
-          onClick={() => setMobileOpen(!mobileOpen)}
+          className="menu-toggle"
+          onClick={() => setOpen(!open)}
+          aria-label="Toggle navigation menu"
+          aria-expanded={open}
         >
-          <span className="nav-logo-icon">🎮</span>
-          <span className="nav-logo-text">GAMING HUB</span>
+          <span>🎮</span>
         </button>
 
         <nav className="nav-menu">
@@ -40,7 +45,7 @@ export default function Navbar() {
               className={`nav-item ${
                 pathname === item.href ? "active" : ""
               }`}
-              onClick={() => setMobileOpen(false)}
+              onClick={() => setOpen(false)}
             >
               <span className="nav-icon">{item.icon}</span>
               <span className="nav-label">{item.name}</span>
@@ -55,79 +60,70 @@ export default function Navbar() {
           top: 50%;
           left: 15px;
           transform: translateY(-50%);
-          width: 68px;
-          max-height: 90vh;
-          overflow-y: auto;
-          overflow-x: hidden;
-          padding: 14px 10px;
+          width: 58px;
+          height: 58px;
+          padding: 6px;
           background: rgba(12, 15, 35, 0.97);
           border: 1px solid #00d9ff;
-          border-radius: 18px;
-          box-shadow: 0 0 15px #00d9ff55;
+          border-radius: 50px;
+          box-shadow: 0 0 15px #00d9ff88;
           z-index: 9999;
-          transition: width 0.35s ease, box-shadow 0.3s ease;
+          overflow: hidden;
+          transition: width 0.4s ease, height 0.4s ease,
+            border-radius 0.4s ease, box-shadow 0.3s ease;
         }
 
-        .gaming-navbar:hover,
-        .gaming-navbar:focus-within,
-        .gaming-navbar.mobile-open {
+        .gaming-navbar.open {
           width: 225px;
-          box-shadow: 0 0 25px #00d9ff, 0 0 40px #8a2be255;
+          height: min(550px, 85vh);
+          border-radius: 18px;
+          box-shadow: 0 0 25px #00d9ff, 0 0 45px #8a2be255;
         }
 
-        .nav-logo {
+        .menu-toggle {
           display: flex;
           align-items: center;
-          gap: 14px;
-          width: 100%;
-          padding: 10px;
-          background: transparent;
+          justify-content: center;
+          width: 44px;
+          height: 44px;
           border: none;
+          border-radius: 50%;
+          background: #101a35;
           color: white;
           cursor: pointer;
-          white-space: nowrap;
-        }
-
-        .nav-logo-icon {
-          min-width: 28px;
           font-size: 25px;
+          transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
 
-        .nav-logo-text,
-        .nav-label {
-          opacity: 0;
-          transition: opacity 0.3s ease;
-        }
-
-        .nav-logo-text {
-          color: #00eaff;
-          font-weight: bold;
-          letter-spacing: 1px;
-        }
-
-        .gaming-navbar:hover .nav-logo-text,
-        .gaming-navbar:focus-within .nav-logo-text,
-        .gaming-navbar.mobile-open .nav-logo-text,
-        .gaming-navbar:hover .nav-label,
-        .gaming-navbar:focus-within .nav-label,
-        .gaming-navbar.mobile-open .nav-label {
-          opacity: 1;
+        .menu-toggle:hover {
+          transform: scale(1.12);
+          box-shadow: 0 0 18px #00d9ff;
         }
 
         .nav-menu {
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 7px;
           margin-top: 15px;
+          opacity: 0;
+          visibility: hidden;
+          transform: translateX(-20px);
+          transition: all 0.3s ease;
+        }
+
+        .gaming-navbar.open .nav-menu {
+          opacity: 1;
+          visibility: visible;
+          transform: translateX(0);
         }
 
         .nav-item {
           display: flex;
           align-items: center;
-          gap: 15px;
-          min-height: 44px;
-          padding: 10px;
-          border-radius: 12px;
+          gap: 14px;
+          min-height: 42px;
+          padding: 9px;
+          border-radius: 11px;
           color: #c9d5e8;
           text-decoration: none;
           white-space: nowrap;
@@ -135,10 +131,9 @@ export default function Navbar() {
         }
 
         .nav-icon {
-          min-width: 28px;
+          min-width: 27px;
           text-align: center;
-          font-size: 21px;
-          transition: transform 0.3s ease;
+          font-size: 20px;
         }
 
         .nav-label {
@@ -149,11 +144,7 @@ export default function Navbar() {
           color: white;
           background: #00d9ff25;
           transform: scale(1.06);
-          box-shadow: 0 0 14px #00d9ff99;
-        }
-
-        .nav-item:hover .nav-icon {
-          transform: scale(1.2);
+          box-shadow: 0 0 12px #00d9ff99;
         }
 
         .nav-item.active {
@@ -167,11 +158,6 @@ export default function Navbar() {
             top: 15px;
             left: 15px;
             transform: none;
-            max-height: calc(100vh - 30px);
-          }
-
-          .gaming-navbar.mobile-open {
-            width: 225px;
           }
         }
       `}</style>
