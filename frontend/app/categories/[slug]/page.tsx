@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type Product = {
   id: number;
@@ -10,153 +10,237 @@ type Product = {
   category: string;
   price: number;
   icon: string;
-  description: string;
 };
 
 const products: Product[] = [
-  {
-    id: 1,
-    name: "Wireless Gaming Controller",
-    category: "Controllers",
-    price: 2499,
-    icon: "🎮",
-    description: "Experience smooth and responsive gaming."
-  },
-  {
-    id: 2,
-    name: "RGB Mechanical Keyboard",
-    category: "Keyboards",
-    price: 1999,
-    icon: "⌨️",
-    description: "Mechanical keys with stunning RGB lighting."
-  },
-  {
-    id: 3,
-    name: "Pro Gaming Headset",
-    category: "Headsets",
-    price: 1799,
-    icon: "🎧",
-    description: "Immersive sound for competitive gaming."
-  },
-  {
-    id: 4,
-    name: "Precision Gaming Mouse",
-    category: "Mice",
-    price: 999,
-    icon: "🖱️",
-    description: "Accurate tracking and comfortable control."
-  },
-  {
-    id: 5,
-    name: "RGB Gaming Mousepad",
-    category: "Accessories",
-    price: 699,
-    icon: "🟪",
-    description: "Smooth surface with RGB lighting."
-  },
-  {
-    id: 6,
-    name: "Pro Wireless Controller",
-    category: "Controllers",
-    price: 3299,
-    icon: "🕹️",
-    description: "Advanced wireless gaming experience."
-  }
+  { id: 1, name: "Wireless Gaming Controller", category: "Controllers", price: 2499, icon: "🎮" },
+  { id: 2, name: "RGB Mechanical Keyboard", category: "Keyboards", price: 1999, icon: "⌨️" },
+  { id: 3, name: "Pro Gaming Headset", category: "Headsets", price: 1799, icon: "🎧" },
+  { id: 4, name: "Precision Gaming Mouse", category: "Mice", price: 999, icon: "🖱️" },
+  { id: 5, name: "RGB Gaming Mousepad", category: "Accessories", price: 699, icon: "🟪" },
+  { id: 6, name: "Pro Wireless Controller", category: "Controllers", price: 3299, icon: "🕹️" }
 ];
 
-const categoryNames: Record<string, string> = {
-  controllers: "Controllers",
-  keyboards: "Keyboards",
-  headsets: "Headsets",
-  mice: "Mice",
-  accessories: "Accessories"
+type FormData = {
+  fullName: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  state: string;
+  pincode: string;
 };
 
-export default function CategoryPage() {
-  const params = useParams<{ slug: string }>();
+const initialForm: FormData = {
+  fullName: "",
+  email: "",
+  phone: "",
+  address: "",
+  city: "",
+  state: "",
+  pincode: ""
+};
+
+export default function CheckoutPage() {
   const router = useRouter();
 
-  const slug = params.slug?.toLowerCase() || "";
-  const categoryName = categoryNames[slug];
-
-  const [cart, setCart] = useState<number[]>([]);
-  const [wishlist, setWishlist] = useState<number[]>([]);
-  const [message, setMessage] = useState("");
+  const [cartIds, setCartIds] = useState<number[]>([]);
+  const [form, setForm] = useState<FormData>(initialForm);
+  const [errors, setErrors] = useState<Partial<FormData>>({});
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     try {
-      setCart(JSON.parse(localStorage.getItem("gamingHubCart") || "[]"));
-      setWishlist(
-        JSON.parse(localStorage.getItem("gamingHubWishlist") || "[]")
+      const savedCart = JSON.parse(
+        localStorage.getItem("gamingHubCart") || "[]"
       );
+
+      if (Array.isArray(savedCart)) {
+        setCartIds(
+          savedCart.filter(
+            (id): id is number =>
+              typeof id === "number" &&
+              products.some((product) => product.id === id)
+          )
+        );
+      }
     } catch {
-      setCart([]);
-      setWishlist([]);
+      setCartIds([]);
     }
+
+    setLoaded(true);
   }, []);
 
-  const categoryProducts = useMemo(
-    () => products.filter((product) => product.category === categoryName),
-    [categoryName]
+  const cartItems = useMemo(() => {
+    return products
+      .map((product) => ({
+        ...product,
+        quantity: cartIds.filter((id) => id === product.id).length
+      }))
+      .filter((item) => item.quantity > 0);
+  }, [cartIds]);
+
+  const subtotal = cartItems.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
   );
 
-  function addToCart(id: number) {
-    const updatedCart = [...cart, id];
+  const shipping = subtotal === 0 || subtotal >= 3000 ? 0 : 99;
+  const total = subtotal + shipping;
 
-    localStorage.setItem("gamingHubCart", JSON.stringify(updatedCart));
-    setCart(updatedCart);
-    setMessage("Product added to cart successfully!");
+  function handleChange(field: keyof FormData, value: string) {
+    setForm((previous) => ({ ...previous, [field]: value }));
+
+    if (errors[field]) {
+      setErrors((previous) => ({ ...previous, [field]: "" }));
+    }
   }
 
-  function toggleWishlist(id: number) {
-    const updatedWishlist = wishlist.includes(id)
-      ? wishlist.filter((item) => item !== id)
-      : [...wishlist, id];
+  function validateForm() {
+    const newErrors: Partial<FormData> = {};
 
-    localStorage.setItem(
-      "gamingHubWishlist",
-      JSON.stringify(updatedWishlist)
-    );
+    if (form.fullName.trim().length < 3) {
+      newErrors.fullName = "Enter your full name (at least 3 characters).";
+    }
 
-    setWishlist(updatedWishlist);
-    setMessage(
-      updatedWishlist.includes(id)
-        ? "Added to wishlist!"
-        : "Removed from wishlist!"
-    );
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      newErrors.email = "Enter a valid email address.";
+    }
+
+    if (!/^[6-9]\d{9}$/.test(form.phone.trim())) {
+      newErrors.phone = "Enter a valid 10-digit Indian mobile number.";
+    }
+
+    if (form.address.trim().length < 8) {
+      newErrors.address = "Enter your complete delivery address.";
+    }
+
+    if (form.city.trim().length < 2) {
+      newErrors.city = "Enter your city.";
+    }
+
+    if (form.state.trim().length < 2) {
+      newErrors.state = "Enter your state.";
+    }
+
+    if (!/^\d{6}$/.test(form.pincode.trim())) {
+      newErrors.pincode = "Enter a valid 6-digit PIN code.";
+    }
+
+    setErrors(newErrors);
+
+    return Object.keys(newErrors).length === 0;
   }
 
-  if (!categoryName) {
+  function placeOrder(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (cartItems.length === 0) {
+      alert("Your cart is empty. Please add products first.");
+      router.push("/products");
+      return;
+    }
+
+    if (!validateForm()) {
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const orderId = `GH${Date.now()}`;
+
+      const order = {
+        orderId,
+        customer: form,
+        products: cartItems.map((item) => ({
+          productId: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity
+        })),
+        subtotal,
+        shipping,
+        totalAmount: total,
+        paymentMethod: "Cash on Delivery",
+        status: "Placed",
+        createdAt: new Date().toISOString()
+      };
+
+      const previousOrders = JSON.parse(
+        localStorage.getItem("gamingHubDemoOrders") || "[]"
+      );
+
+      const updatedOrders = Array.isArray(previousOrders)
+        ? [...previousOrders, order]
+        : [order];
+
+      localStorage.setItem(
+        "gamingHubDemoOrders",
+        JSON.stringify(updatedOrders)
+      );
+
+      localStorage.setItem("gamingHubLastOrder", JSON.stringify(order));
+      localStorage.setItem("gamingHubCart", JSON.stringify([]));
+
+      router.push(`/order-confirmation/${orderId}`);
+    } catch {
+      alert("Unable to place your order. Please try again.");
+      setLoading(false);
+    }
+  }
+
+  if (!loaded) {
     return (
-      <main className="category-page">
-        <div className="empty">
-          <h1>Category Not Found</h1>
-          <p>The category you are looking for does not exist.</p>
-          <button onClick={() => router.push("/products")}>
-            Browse All Products
+      <main className="checkout-page">
+        <p>Loading checkout...</p>
+        <style jsx>{`
+          .checkout-page {
+            min-height: 100vh;
+            background: #090d18;
+            color: white;
+            padding: 120px 20px;
+            text-align: center;
+          }
+        `}</style>
+      </main>
+    );
+  }
+
+  if (cartItems.length === 0) {
+    return (
+      <main className="checkout-page">
+        <section className="empty-cart">
+          <h1>Your cart is empty 🛒</h1>
+          <p>Add some gaming products before proceeding to checkout.</p>
+          <button type="button" onClick={() => router.push("/products")}>
+            Browse Products
           </button>
-        </div>
+        </section>
 
         <style jsx>{`
-          .category-page {
+          .checkout-page {
             min-height: 100vh;
             background: #090d18;
             color: white;
             display: grid;
             place-items: center;
-            padding: 30px;
+            padding: 100px 20px;
           }
-          .empty {
+          .empty-cart {
             text-align: center;
+            max-width: 500px;
           }
-          h1 {
-            color: #a78bfa;
+          .empty-cart p {
+            color: #94a3b8;
+            margin: 15px 0 25px;
           }
           button {
             background: #7c3aed;
             color: white;
-            padding: 13px 22px;
             border: 0;
+            padding: 13px 22px;
             border-radius: 9px;
             cursor: pointer;
           }
@@ -166,324 +250,443 @@ export default function CategoryPage() {
   }
 
   return (
-    <main className="category-page">
-      <section className="hero">
-        <p className="eyebrow">GAMING HUB COLLECTION</p>
-        <h1>{categoryName}</h1>
-        <p>
-          Explore our {categoryName.toLowerCase()} collection and upgrade
-          your gaming experience.
-        </p>
+    <main className="checkout-page">
+      <header className="page-header">
+        <span className="eyebrow">GAMING HUB</span>
+        <h1>Secure Checkout</h1>
+        <p>Complete your delivery details to place your order.</p>
+      </header>
 
-        <div className="hero-buttons">
-          <button onClick={() => router.push("/products")}>
-            All Products
-          </button>
-          <span>{categoryProducts.length} Products Available</span>
-        </div>
-      </section>
+      <form className="checkout-layout" onSubmit={placeOrder}>
+        <section className="form-section">
+          <div className="form-card">
+            <h2>01. Delivery Information</h2>
+            <p className="section-description">
+              Enter the details where you want your order delivered.
+            </p>
 
-      {message && (
-        <div className="message" role="status">
-          {message}
-          <button onClick={() => setMessage("")}>×</button>
-        </div>
-      )}
+            <div className="form-grid">
+              <div className="field full">
+                <label>Full Name *</label>
+                <input
+                  value={form.fullName}
+                  onChange={(e) => handleChange("fullName", e.target.value)}
+                  placeholder="Enter your full name"
+                />
+                {errors.fullName && <small>{errors.fullName}</small>}
+              </div>
 
-      <section className="products-section">
-        <div className="section-heading">
-          <div>
-            <h2>{categoryName} Products</h2>
-            <p>Choose your next gaming upgrade.</p>
+              <div className="field">
+                <label>Email Address *</label>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => handleChange("email", e.target.value)}
+                  placeholder="example@gmail.com"
+                />
+                {errors.email && <small>{errors.email}</small>}
+              </div>
+
+              <div className="field">
+                <label>Mobile Number *</label>
+                <input
+                  type="tel"
+                  maxLength={10}
+                  value={form.phone}
+                  onChange={(e) =>
+                    handleChange("phone", e.target.value.replace(/\D/g, ""))
+                  }
+                  placeholder="10-digit mobile number"
+                />
+                {errors.phone && <small>{errors.phone}</small>}
+              </div>
+
+              <div className="field full">
+                <label>Full Address *</label>
+                <textarea
+                  rows={3}
+                  value={form.address}
+                  onChange={(e) => handleChange("address", e.target.value)}
+                  placeholder="House number, street, area, landmark..."
+                />
+                {errors.address && <small>{errors.address}</small>}
+              </div>
+
+              <div className="field">
+                <label>City *</label>
+                <input
+                  value={form.city}
+                  onChange={(e) => handleChange("city", e.target.value)}
+                  placeholder="Enter city"
+                />
+                {errors.city && <small>{errors.city}</small>}
+              </div>
+
+              <div className="field">
+                <label>State *</label>
+                <input
+                  value={form.state}
+                  onChange={(e) => handleChange("state", e.target.value)}
+                  placeholder="Enter state"
+                />
+                {errors.state && <small>{errors.state}</small>}
+              </div>
+
+              <div className="field">
+                <label>PIN Code *</label>
+                <input
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={form.pincode}
+                  onChange={(e) =>
+                    handleChange("pincode", e.target.value.replace(/\D/g, ""))
+                  }
+                  placeholder="6-digit PIN code"
+                />
+                {errors.pincode && <small>{errors.pincode}</small>}
+              </div>
+            </div>
           </div>
-        </div>
 
-        {categoryProducts.length === 0 ? (
-          <div className="empty-products">
-            <h3>No products available</h3>
-            <p>Check back later for new products.</p>
+          <div className="form-card payment-card">
+            <h2>02. Payment Method</h2>
+
+            <div className="payment-option">
+              <span className="payment-icon">💵</span>
+              <div>
+                <strong>Cash on Delivery (COD)</strong>
+                <p>Pay when your order arrives at your doorstep.</p>
+              </div>
+              <span className="selected">✓</span>
+            </div>
           </div>
-        ) : (
-          <div className="product-grid">
-            {categoryProducts.map((product) => (
-              <article className="product-card" key={product.id}>
-                <button
-                  className={`wishlist ${
-                    wishlist.includes(product.id) ? "active" : ""
-                  }`}
-                  onClick={() => toggleWishlist(product.id)}
-                  aria-label="Toggle wishlist"
-                >
-                  {wishlist.includes(product.id) ? "♥" : "♡"}
-                </button>
+        </section>
 
-                <div
-                  className="product-image"
-                  onClick={() => router.push(`/products/${product.id}`)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      router.push(`/products/${product.id}`);
-                    }
-                  }}
-                >
-                  <span>{product.icon}</span>
+        <aside className="order-summary">
+          <h2>Order Summary</h2>
+          <p className="section-description">
+            {cartIds.length} item(s) in your cart
+          </p>
+
+          <div className="order-products">
+            {cartItems.map((item) => (
+              <div className="order-product" key={item.id}>
+                <span className="order-icon">{item.icon}</span>
+                <div className="order-product-info">
+                  <strong>{item.name}</strong>
+                  <span>Qty: {item.quantity}</span>
                 </div>
-
-                <div className="product-info">
-                  <span className="category-label">
-                    {product.category}
-                  </span>
-
-                  <h3>{product.name}</h3>
-                  <p>{product.description}</p>
-
-                  <div className="price">
-                    ₹{product.price.toLocaleString("en-IN")}
-                  </div>
-
-                  <button
-                    className="details-btn"
-                    onClick={() => router.push(`/products/${product.id}`)}
-                  >
-                    View Details
-                  </button>
-
-                  <button
-                    className="cart-btn"
-                    onClick={() => addToCart(product.id)}
-                  >
-                    + Add to Cart
-                  </button>
-                </div>
-              </article>
+                <strong>
+                  ₹{(item.price * item.quantity).toLocaleString("en-IN")}
+                </strong>
+              </div>
             ))}
           </div>
-        )}
-      </section>
+
+          <div className="summary-row">
+            <span>Subtotal</span>
+            <strong>₹{subtotal.toLocaleString("en-IN")}</strong>
+          </div>
+
+          <div className="summary-row">
+            <span>Shipping</span>
+            <strong>
+              {shipping === 0 ? "FREE" : `₹${shipping.toLocaleString("en-IN")}`}
+            </strong>
+          </div>
+
+          <div className="summary-divider" />
+
+          <div className="total-row">
+            <span>Total Amount</span>
+            <strong>₹{total.toLocaleString("en-IN")}</strong>
+          </div>
+
+          <button className="place-order-btn" type="submit" disabled={loading}>
+            {loading ? "Placing Order..." : "Place Order →"}
+          </button>
+
+          <p className="secure-note">🔒 Your order details are kept secure.</p>
+
+          <button
+            type="button"
+            className="back-cart"
+            onClick={() => router.push("/cart")}
+          >
+            ← Back to Cart
+          </button>
+        </aside>
+      </form>
 
       <style jsx>{`
-        .category-page {
+        .checkout-page {
           min-height: 100vh;
+          padding: 90px 6% 65px;
           background: #090d18;
           color: #f8fafc;
-          padding: 85px 6% 60px;
         }
 
-        .hero {
-          padding: 45px;
-          border: 1px solid #302653;
-          border-radius: 22px;
-          background: linear-gradient(120deg, #17132f, #101c36);
-          margin-bottom: 45px;
+        .page-header {
+          margin-bottom: 35px;
         }
 
         .eyebrow {
           color: #a78bfa;
           font-size: 12px;
-          letter-spacing: 3px;
           font-weight: bold;
+          letter-spacing: 3px;
         }
 
-        .hero h1 {
-          font-size: clamp(35px, 6vw, 55px);
+        .page-header h1 {
+          font-size: clamp(32px, 5vw, 46px);
           margin: 12px 0;
           background: linear-gradient(90deg, #c4b5fd, #60a5fa);
           background-clip: text;
           color: transparent;
         }
 
-        .hero p {
-          color: #aab4c8;
-          line-height: 1.7;
+        .page-header p,
+        .section-description {
+          color: #94a3b8;
+          font-size: 14px;
         }
 
-        .hero-buttons {
+        .checkout-layout {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) 360px;
+          align-items: start;
+          gap: 28px;
+        }
+
+        .form-section {
+          display: grid;
+          gap: 22px;
+        }
+
+        .form-card,
+        .order-summary {
+          padding: 25px;
+          border: 1px solid #29364c;
+          border-radius: 16px;
+          background: #111a2a;
+        }
+
+        .form-card h2,
+        .order-summary h2 {
+          font-size: 21px;
+          margin-bottom: 9px;
+        }
+
+        .section-description {
+          margin-bottom: 22px;
+        }
+
+        .form-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+        }
+
+        .field {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .field.full {
+          grid-column: 1 / -1;
+        }
+
+        .field label {
+          font-size: 13px;
+          color: #cbd5e1;
+        }
+
+        .field input,
+        .field textarea {
+          width: 100%;
+          padding: 13px;
+          background: #0b1220;
+          border: 1px solid #334155;
+          border-radius: 8px;
+          color: white;
+          font: inherit;
+          outline: none;
+        }
+
+        .field input:focus,
+        .field textarea:focus {
+          border-color: #8b5cf6;
+        }
+
+        .field textarea {
+          resize: vertical;
+        }
+
+        .field small {
+          color: #fb7185;
+          font-size: 12px;
+        }
+
+        .payment-option {
           display: flex;
           align-items: center;
-          gap: 20px;
-          flex-wrap: wrap;
-          margin-top: 25px;
+          gap: 14px;
+          padding: 17px;
+          background: #0b1220;
+          border: 1px solid #7c3aed;
+          border-radius: 10px;
         }
 
-        .hero-buttons button {
+        .payment-icon {
+          font-size: 27px;
+        }
+
+        .payment-option strong {
+          font-size: 14px;
+        }
+
+        .payment-option p {
+          color: #94a3b8;
+          font-size: 12px;
+          margin-top: 5px;
+        }
+
+        .selected {
+          margin-left: auto;
+          color: #86efac;
+          font-size: 20px;
+        }
+
+        .order-summary {
+          position: sticky;
+          top: 25px;
+        }
+
+        .order-products {
+          display: grid;
+          gap: 17px;
+          padding: 5px 0 20px;
+          margin-bottom: 20px;
+          border-bottom: 1px solid #334155;
+        }
+
+        .order-product {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          font-size: 12px;
+        }
+
+        .order-icon {
+          width: 42px;
+          height: 42px;
+          display: grid;
+          place-items: center;
+          background: #211c42;
+          border-radius: 8px;
+          font-size: 22px;
+        }
+
+        .order-product-info {
+          flex: 1;
+          display: grid;
+          gap: 5px;
+        }
+
+        .order-product-info span {
+          color: #94a3b8;
+        }
+
+        .order-product > strong:last-child {
+          color: #c4b5fd;
+          white-space: nowrap;
+        }
+
+        .summary-row,
+        .total-row {
+          display: flex;
+          justify-content: space-between;
+          gap: 10px;
+          margin: 17px 0;
+          font-size: 14px;
+          color: #cbd5e1;
+        }
+
+        .summary-divider {
+          border-top: 1px solid #334155;
+          margin: 20px 0;
+        }
+
+        .total-row {
+          font-size: 16px;
+          align-items: center;
+        }
+
+        .total-row strong {
+          color: #c4b5fd;
+          font-size: 24px;
+        }
+
+        .place-order-btn {
+          width: 100%;
+          padding: 15px;
+          margin-top: 15px;
           background: #7c3aed;
           color: white;
           border: none;
           border-radius: 9px;
-          padding: 12px 22px;
+          font-weight: bold;
           cursor: pointer;
         }
 
-        .hero-buttons span {
-          color: #c4b5fd;
-          font-size: 14px;
+        .place-order-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
 
-        .message {
-          background: #172b28;
-          color: #86efac;
-          padding: 13px 18px;
-          border-radius: 9px;
-          margin-bottom: 25px;
-          display: flex;
-          justify-content: space-between;
-        }
-
-        .message button {
-          background: transparent;
-          border: 0;
-          color: white;
-          font-size: 20px;
-          cursor: pointer;
-        }
-
-        .section-heading {
-          margin-bottom: 25px;
-        }
-
-        .section-heading h2 {
-          font-size: 28px;
-          margin-bottom: 7px;
-        }
-
-        .section-heading p,
-        .product-info p {
+        .secure-note {
           color: #94a3b8;
-        }
-
-        .product-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(235px, 1fr));
-          gap: 25px;
-        }
-
-        .product-card {
-          position: relative;
-          background: #121a2b;
-          border: 1px solid #26334a;
-          border-radius: 17px;
-          overflow: hidden;
-          transition: 0.25s;
-        }
-
-        .product-card:hover {
-          transform: translateY(-6px);
-          border-color: #8b5cf6;
-          box-shadow: 0 12px 35px #7c3aed22;
-        }
-
-        .wishlist {
-          position: absolute;
-          right: 15px;
-          top: 15px;
-          z-index: 2;
-          width: 38px;
-          height: 38px;
-          border-radius: 50%;
-          border: 1px solid #475569;
-          background: #0b1220;
-          color: white;
-          font-size: 23px;
-          cursor: pointer;
-        }
-
-        .wishlist.active {
-          color: #fb7185;
-          border-color: #fb7185;
-        }
-
-        .product-image {
-          height: 180px;
-          display: grid;
-          place-items: center;
-          background: linear-gradient(135deg, #211c42, #10253d);
-          cursor: pointer;
-        }
-
-        .product-image span {
-          font-size: 75px;
-        }
-
-        .product-info {
-          padding: 20px;
-        }
-
-        .category-label {
-          color: #a78bfa;
+          text-align: center;
           font-size: 12px;
-          text-transform: uppercase;
-          letter-spacing: 1px;
+          margin: 17px 0;
         }
 
-        .product-info h3 {
-          margin: 10px 0;
-          font-size: 18px;
-        }
-
-        .product-info p {
-          font-size: 13px;
-          min-height: 40px;
-          line-height: 1.5;
-        }
-
-        .price {
-          font-size: 23px;
-          font-weight: bold;
-          margin: 18px 0;
-          color: #c4b5fd;
-        }
-
-        .details-btn,
-        .cart-btn {
-          width: 100%;
-          padding: 12px;
-          border-radius: 8px;
-          cursor: pointer;
-          font-weight: bold;
-          margin-top: 9px;
-        }
-
-        .details-btn {
+        .back-cart {
+          display: block;
+          margin: auto;
           background: transparent;
+          border: none;
           color: #c4b5fd;
-          border: 1px solid #7c3aed;
+          cursor: pointer;
         }
 
-        .cart-btn {
-          background: #7c3aed;
-          color: white;
-          border: 1px solid #7c3aed;
-        }
-
-        .details-btn:hover,
-        .cart-btn:hover,
-        .hero-buttons button:hover {
-          opacity: 0.85;
-        }
-
-        .empty-products {
-          text-align: center;
-          padding: 60px 15px;
-          color: #94a3b8;
-        }
-
-        .empty {
-          text-align: center;
-        }
-
-        @media (max-width: 600px) {
-          .category-page {
-            padding: 80px 17px 40px;
-          }
-
-          .hero {
-            padding: 25px;
-          }
-
-          .product-grid {
+        @media (max-width: 900px) {
+          .checkout-layout {
             grid-template-columns: 1fr;
+          }
+
+          .order-summary {
+            position: static;
+          }
+        }
+
+        @media (max-width: 550px) {
+          .checkout-page {
+            padding: 85px 15px 40px;
+          }
+
+          .form-card,
+          .order-summary {
+            padding: 18px;
+          }
+
+          .form-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .field.full {
+            grid-column: auto;
           }
         }
       `}</style>
