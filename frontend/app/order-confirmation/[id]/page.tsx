@@ -476,4 +476,3 @@ export default function OrderConfirmationPage() {
     </main>
   );
 }
-s
