@@ -11,9 +11,25 @@ const authRoutes = require("./routes/auth");
 
 const app = express();
 
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://gaming-hub-login-ruby.vercel.app"
+];
+
 app.use(cors({
-  origin: process.env.CLIENT_ORIGIN || "http://localhost:3000"
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS: " + origin));
+    }
+  },
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true
 }));
+
+app.options(/.*/, cors());
 
 app.use(express.json());
 
@@ -51,3 +67,4 @@ async function startServer() {
 }
 
 startServer();
+
