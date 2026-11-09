@@ -2,510 +2,600 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-const products = [
-  { id: 1, name: "Wireless Gaming Controller", category: "Controllers", price: 2499, icon: "🎮" },
-  { id: 2, name: "RGB Mechanical Keyboard", category: "Keyboards", price: 1999, icon: "⌨️" },
-  { id: 3, name: "Pro Gaming Headset", category: "Headsets", price: 1799, icon: "🎧" },
-  { id: 4, name: "Precision Gaming Mouse", category: "Mice", price: 999, icon: "🖱️" },
-  { id: 5, name: "RGB Gaming Mousepad", category: "Accessories", price: 699, icon: "🟪" },
-  { id: 6, name: "Pro Wireless Controller", category: "Controllers", price: 3299, icon: "🕹️" },
+type Product = {
+  id: number;
+  name: string;
+  category: string;
+  price: number;
+  icon: string;
+  description: string;
+};
+
+const products: Product[] = [
+  {
+    id: 1,
+    name: "Wireless Gaming Controller",
+    category: "Controllers",
+    price: 2499,
+    icon: "🎮",
+    description: "Smooth and responsive gaming experience."
+  },
+  {
+    id: 2,
+    name: "RGB Mechanical Keyboard",
+    category: "Keyboards",
+    price: 1999,
+    icon: "⌨️",
+    description: "Mechanical keys with RGB lighting."
+  },
+  {
+    id: 3,
+    name: "Pro Gaming Headset",
+    category: "Headsets",
+    price: 1799,
+    icon: "🎧",
+    description: "Immersive gaming audio."
+  },
+  {
+    id: 4,
+    name: "Precision Gaming Mouse",
+    category: "Mice",
+    price: 999,
+    icon: "🖱️",
+    description: "Precise tracking and comfortable control."
+  },
+  {
+    id: 5,
+    name: "RGB Gaming Mousepad",
+    category: "Accessories",
+    price: 699,
+    icon: "🟪",
+    description: "Smooth surface with RGB lighting."
+  },
+  {
+    id: 6,
+    name: "Pro Wireless Controller",
+    category: "Controllers",
+    price: 3299,
+    icon: "🕹️",
+    description: "Advanced wireless gaming experience."
+  }
 ];
+
+type CartItem = {
+  product: Product;
+  quantity: number;
+};
 
 export default function CartPage() {
   const router = useRouter();
 
-  const [cart, setCart] = useState<number[]>([]);
+  const [cartIds, setCartIds] = useState<number[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     try {
-      const savedCart = localStorage.getItem("gamingHubCart");
+      const savedCart = JSON.parse(
+        localStorage.getItem("gamingHubCart") || "[]"
+      );
 
-      if (savedCart) {
-        const parsed = JSON.parse(savedCart);
-
-        if (Array.isArray(parsed)) {
-          setCart(
-            parsed.filter(
-              (id) =>
-                typeof id === "number" &&
-                products.some((p) => p.id === id)
-            )
-          );
-        }
+      if (Array.isArray(savedCart)) {
+        setCartIds(
+          savedCart.filter(
+            (id): id is number =>
+              typeof id === "number" &&
+              products.some((product) => product.id === id)
+          )
+        );
       }
     } catch {
-      setCart([]);
+      setCartIds([]);
     }
 
     setLoaded(true);
   }, []);
 
-  function updateCart(updatedCart: number[]) {
-    setCart(updatedCart);
-    localStorage.setItem(
-      "gamingHubCart",
-      JSON.stringify(updatedCart)
-    );
+  const cartItems: CartItem[] = useMemo(() => {
+    return products
+      .map((product) => {
+        const quantity = cartIds.filter((id) => id === product.id).length;
+
+        return { product, quantity };
+      })
+      .filter((item) => item.quantity > 0);
+  }, [cartIds]);
+
+  const totalQuantity = cartIds.length;
+
+  const subtotal = cartItems.reduce(
+    (total, item) => total + item.product.price * item.quantity,
+    0
+  );
+
+  const shipping = subtotal === 0 || subtotal >= 3000 ? 0 : 99;
+  const total = subtotal + shipping;
+
+  function saveCart(updatedCart: number[]) {
+    setCartIds(updatedCart);
+    localStorage.setItem("gamingHubCart", JSON.stringify(updatedCart));
   }
 
   function increaseQuantity(id: number) {
-    updateCart([...cart, id]);
+    saveCart([...cartIds, id]);
+    setMessage("Quantity updated.");
   }
 
   function decreaseQuantity(id: number) {
-    const index = cart.indexOf(id);
+    const index = cartIds.indexOf(id);
 
     if (index !== -1) {
-      const updated = [...cart];
-      updated.splice(index, 1);
-      updateCart(updated);
+      const updatedCart = [...cartIds];
+      updatedCart.splice(index, 1);
+      saveCart(updatedCart);
+      setMessage("Quantity updated.");
     }
   }
 
   function removeProduct(id: number) {
-    updateCart(cart.filter((item) => item !== id));
+    saveCart(cartIds.filter((item) => item !== id));
+    setMessage("Product removed from cart.");
   }
 
   function clearCart() {
-    if (confirm("Are you sure you want to clear your cart?")) {
-      updateCart([]);
-    }
+    saveCart([]);
+    setMessage("Your cart has been cleared.");
   }
-
-  const cartItems = useMemo(() => {
-    return products
-      .map((product) => ({
-        ...product,
-        quantity: cart.filter((id) => id === product.id).length,
-      }))
-      .filter((product) => product.quantity > 0);
-  }, [cart]);
-
-  const total = cartItems.reduce(
-    (sum, product) => sum + product.price * product.quantity,
-    0
-  );
-
-  const totalItems = cart.length;
 
   if (!loaded) {
     return (
       <main className="cart-page">
         <p>Loading your cart...</p>
+        <style jsx>{`
+          .cart-page {
+            min-height: 100vh;
+            padding: 120px 20px;
+            background: #090d18;
+            color: white;
+            text-align: center;
+          }
+        `}</style>
       </main>
     );
   }
 
   return (
     <main className="cart-page">
+      <section className="cart-header">
+        <span className="eyebrow">YOUR GAMING SELECTION</span>
+        <h1>Shopping Cart 🛒</h1>
+        <p>Review your products before checking out.</p>
+      </section>
+
+      {message && (
+        <div className="message" role="status">
+          {message}
+          <button onClick={() => setMessage("")}>×</button>
+        </div>
+      )}
+
+      {cartItems.length === 0 ? (
+        <section className="empty-cart">
+          <div className="empty-icon">🛒</div>
+          <h2>Your cart is empty</h2>
+          <p>You haven't added any gaming products yet.</p>
+          <button onClick={() => router.push("/products")}>
+            Explore Products
+          </button>
+        </section>
+      ) : (
+        <section className="cart-layout">
+          <div className="cart-list">
+            <div className="list-heading">
+              <h2>Your Items ({totalQuantity})</h2>
+              <button className="clear-btn" onClick={clearCart}>
+                Clear Cart
+              </button>
+            </div>
+
+            {cartItems.map(({ product, quantity }) => (
+              <article className="cart-item" key={product.id}>
+                <div
+                  className="product-icon"
+                  onClick={() => router.push(`/products/${product.id}`)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      router.push(`/products/${product.id}`);
+                    }
+                  }}
+                >
+                  {product.icon}
+                </div>
+
+                <div className="product-details">
+                  <span>{product.category}</span>
+                  <h3>{product.name}</h3>
+                  <p>{product.description}</p>
+                  <strong>
+                    ₹{product.price.toLocaleString("en-IN")}
+                  </strong>
+                </div>
+
+                <div className="item-actions">
+                  <div className="quantity-control">
+                    <button
+                      onClick={() => decreaseQuantity(product.id)}
+                      aria-label={`Decrease ${product.name} quantity`}
+                    >
+                      −
+                    </button>
+
+                    <span>{quantity}</span>
+
+                    <button
+                      onClick={() => increaseQuantity(product.id)}
+                      aria-label={`Increase ${product.name} quantity`}
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  <strong className="item-total">
+                    ₹{(product.price * quantity).toLocaleString("en-IN")}
+                  </strong>
+
+                  <button
+                    className="remove-btn"
+                    onClick={() => removeProduct(product.id)}
+                  >
+                    Remove
+                  </button>
+                </div>
+              </article>
+            ))}
+
+            <button
+              className="continue-btn"
+              onClick={() => router.push("/products")}
+            >
+              ← Continue Shopping
+            </button>
+          </div>
+
+          <aside className="summary">
+            <h2>Order Summary</h2>
+
+            <div className="summary-row">
+              <span>Items ({totalQuantity})</span>
+              <strong>₹{subtotal.toLocaleString("en-IN")}</strong>
+            </div>
+
+            <div className="summary-row">
+              <span>Shipping</span>
+              <strong>
+                {shipping === 0
+                  ? "FREE"
+                  : `₹${shipping.toLocaleString("en-IN")}`}
+              </strong>
+            </div>
+
+            <p className="shipping-note">
+              {subtotal >= 3000
+                ? "You've unlocked free shipping!"
+                : `Add ₹${(3000 - subtotal).toLocaleString("en-IN")} more for free shipping.`}
+            </p>
+
+            <div className="summary-divider" />
+
+            <div className="summary-total">
+              <span>Total</span>
+              <strong>₹{total.toLocaleString("en-IN")}</strong>
+            </div>
+
+            <button
+              className="checkout-btn"
+              onClick={() => router.push("/checkout")}
+            >
+              Proceed to Checkout →
+            </button>
+
+            <p className="payment-note">
+              🔒 Secure checkout · Cash on Delivery
+            </p>
+          </aside>
+        </section>
+      )}
 
       <style jsx>{`
         .cart-page {
           min-height: 100vh;
-          padding: 35px 7% 60px;
-          background: #080b14;
-          color: #f5f7ff;
+          padding: 90px 6% 65px;
+          background: #090d18;
+          color: #f8fafc;
         }
 
-        .page-topbar {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 15px;
-          flex-wrap: wrap;
-          margin-bottom: 55px;
-        }
-
-        .brand {
-          color: #f5f7ff;
-          font-size: 23px;
-          font-weight: 800;
-          text-decoration: none;
-        }
-
-        .brand span:first-child {
-          color: #38e8f5;
-        }
-
-        .brand-dot {
-          color: #9b78ff;
-        }
-
-        .top-actions {
-          display: flex;
-          gap: 12px;
-          flex-wrap: wrap;
-        }
-
-        .back-link {
-          color: #38e8f5;
-          text-decoration: none;
-          padding: 10px 15px;
-          border: 1px solid rgba(56,232,245,.5);
-          border-radius: 9px;
-        }
-
-        .cart-container {
-          max-width: 1150px;
-          margin: auto;
+        .cart-header {
+          margin-bottom: 35px;
         }
 
         .eyebrow {
-          color: #38e8f5;
+          color: #a78bfa;
           font-size: 12px;
           letter-spacing: 3px;
           font-weight: bold;
         }
 
-        .page-title {
-          font-size: clamp(30px, 5vw, 45px);
-          margin: 15px 0;
+        .cart-header h1 {
+          font-size: clamp(32px, 5vw, 46px);
+          margin: 12px 0;
+          background: linear-gradient(90deg, #c4b5fd, #60a5fa);
+          background-clip: text;
+          color: transparent;
         }
 
-        .page-description {
-          color: #9ba6bb;
-          line-height: 1.7;
-          margin-bottom: 35px;
+        .cart-header p,
+        .product-details p {
+          color: #94a3b8;
+        }
+
+        .message {
+          display: flex;
+          justify-content: space-between;
+          background: #172b28;
+          color: #86efac;
+          padding: 13px 18px;
+          border-radius: 9px;
+          margin-bottom: 22px;
+        }
+
+        .message button {
+          background: transparent;
+          color: white;
+          border: none;
+          font-size: 20px;
+          cursor: pointer;
         }
 
         .cart-layout {
           display: grid;
-          grid-template-columns: 1.7fr 1fr;
-          gap: 30px;
+          grid-template-columns: minmax(0, 1fr) 330px;
+          gap: 28px;
           align-items: start;
         }
 
-        .cart-items {
+        .cart-list,
+        .summary {
+          background: #111a2a;
+          border: 1px solid #29364c;
+          border-radius: 16px;
+          padding: 24px;
+        }
+
+        .list-heading {
           display: flex;
-          flex-direction: column;
-          gap: 18px;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          margin-bottom: 20px;
+        }
+
+        .list-heading h2,
+        .summary h2 {
+          font-size: 21px;
+        }
+
+        .clear-btn,
+        .remove-btn {
+          background: transparent;
+          border: none;
+          color: #fb7185;
+          cursor: pointer;
         }
 
         .cart-item {
-          display: flex;
-          gap: 22px;
-          padding: 20px;
-          background: #111725;
-          border: 1px solid rgba(255,255,255,.1);
-          border-radius: 15px;
+          display: grid;
+          grid-template-columns: 95px minmax(0, 1fr) auto;
+          gap: 18px;
+          align-items: center;
+          padding: 20px 0;
+          border-top: 1px solid #29364c;
         }
 
-        .cart-item-icon {
-          min-width: 120px;
-          height: 120px;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          background: linear-gradient(135deg, #171f30, #252044);
+        .product-icon {
+          height: 90px;
+          display: grid;
+          place-items: center;
+          background: linear-gradient(135deg, #211c42, #10253d);
           border-radius: 12px;
-          font-size: 55px;
+          font-size: 43px;
+          cursor: pointer;
         }
 
-        .cart-item-info {
-          flex: 1;
+        .product-details span {
+          color: #a78bfa;
+          font-size: 11px;
+          text-transform: uppercase;
         }
 
-        .cart-item-info p {
-          color: #38e8f5;
+        .product-details h3 {
+          margin: 7px 0;
+          font-size: 16px;
+        }
+
+        .product-details p {
           font-size: 12px;
-          margin: 0 0 7px;
+          margin-bottom: 9px;
         }
 
-        .cart-item-info h3 {
-          margin: 0 0 10px;
-          font-size: 18px;
+        .product-details strong {
+          color: #c4b5fd;
         }
 
-        .cart-item-price {
-          color: #38e8f5;
-          font-size: 19px;
-          font-weight: bold;
+        .item-actions {
+          text-align: right;
         }
 
-        .quantity-controls {
+        .quantity-control {
           display: flex;
           align-items: center;
-          gap: 15px;
-          margin: 15px 0;
+          justify-content: center;
+          gap: 13px;
+          background: #0b1220;
+          border: 1px solid #334155;
+          border-radius: 8px;
+          padding: 5px;
+          margin-bottom: 10px;
         }
 
-        .quantity-controls button {
-          width: 30px;
-          height: 40px;
-          background: transparent;
-          border: 1px solid #38e8f5;
-          border-radius: 7px;
-          color: white;
-          cursor: pointer;
-          font-size: 18px;
-        }
-
-        .remove-button {
-          background: transparent;
+        .quantity-control button {
+          width: 27px;
+          height: 27px;
           border: none;
-          color: #ff8299;
+          border-radius: 5px;
+          background: #29364c;
+          color: white;
+          font-size: 18px;
           cursor: pointer;
-          padding: 5px 0;
         }
 
-        .cart-summary {
-          padding: 25px;
-          background: #111725;
-          border: 1px solid rgba(255,255,255,.1);
-          border-radius: 15px;
-          position: sticky;
-          top: 20px;
+        .item-total {
+          display: block;
+          margin-bottom: 8px;
+          color: #c4b5fd;
         }
 
-        .cart-summary h2 {
-          margin-top: 0;
+        .continue-btn {
+          margin-top: 22px;
+          background: transparent;
+          color: #c4b5fd;
+          border: none;
+          cursor: pointer;
+        }
+
+        .summary h2 {
           margin-bottom: 25px;
         }
 
-        .summary-row {
+        .summary-row,
+        .summary-total {
           display: flex;
           justify-content: space-between;
           gap: 10px;
-          margin: 18px 0;
-          color: #9ba6bb;
+          margin-bottom: 18px;
+          color: #cbd5e1;
         }
 
-        .summary-row strong {
-          color: #f5f7ff;
+        .shipping-note {
+          color: #86efac;
+          font-size: 12px;
+          margin-top: -8px;
+          margin-bottom: 20px;
+        }
+
+        .summary-divider {
+          border-top: 1px solid #334155;
+          margin: 20px 0;
         }
 
         .summary-total {
-          border-top: 1px solid rgba(255,255,255,.15);
-          padding-top: 20px;
+          align-items: center;
           font-size: 18px;
         }
 
         .summary-total strong {
-          color: #38e8f5;
+          color: #c4b5fd;
+          font-size: 25px;
         }
 
-        .checkout-button {
+        .checkout-btn,
+        .empty-cart button {
           width: 100%;
-          padding: 15px;
-          margin-top: 15px;
+          padding: 14px;
           border: none;
-          border-radius: 10px;
-          background: linear-gradient(90deg, #38e8f5, #9b78ff);
-          color: #080b14;
-          font-weight: bold;
-          font-size: 15px;
-          cursor: pointer;
-        }
-
-        .checkout-button:hover {
-          opacity: .85;
-        }
-
-        .clear-button {
-          width: 100%;
-          margin-top: 12px;
-          padding: 11px;
-          border: 1px solid #ff8299;
           border-radius: 9px;
-          background: transparent;
-          color: #ff8299;
+          background: #7c3aed;
+          color: white;
+          font-weight: bold;
           cursor: pointer;
+        }
+
+        .payment-note {
+          text-align: center;
+          color: #94a3b8;
+          font-size: 12px;
+          margin-top: 17px;
         }
 
         .empty-cart {
+          max-width: 500px;
+          margin: 70px auto;
           text-align: center;
-          padding: 70px 20px;
-          background: #111725;
-          border-radius: 18px;
+          padding: 45px 25px;
+          background: #111a2a;
+          border: 1px solid #29364c;
+          border-radius: 17px;
         }
 
-        .empty-cart-icon {
-          font-size: 70px;
-          margin-bottom: 15px;
+        .empty-icon {
+          font-size: 65px;
+        }
+
+        .empty-cart h2 {
+          margin: 20px 0 10px;
         }
 
         .empty-cart p {
-          color: #9ba6bb;
+          color: #94a3b8;
           margin-bottom: 25px;
-        }
-
-        .primary-button {
-          display: inline-block;
-          padding: 13px 22px;
-          border-radius: 9px;
-          background: linear-gradient(90deg, #38e8f5, #9b78ff);
-          color: #080b14;
-          text-decoration: none;
-          font-weight: bold;
         }
 
         @media (max-width: 850px) {
           .cart-layout {
             grid-template-columns: 1fr;
           }
-
-          .cart-summary {
-            position: static;
-          }
         }
 
-        @media (max-width: 500px) {
+        @media (max-width: 550px) {
           .cart-page {
-            padding: 25px 5%;
+            padding: 85px 15px 40px;
+          }
+
+          .cart-list,
+          .summary {
+            padding: 17px;
           }
 
           .cart-item {
-            flex-direction: column;
+            grid-template-columns: 70px minmax(0, 1fr);
+            gap: 12px;
           }
 
-          .cart-item-icon {
-            width: 100%;
+          .product-icon {
+            height: 70px;
+            font-size: 34px;
           }
 
-          .page-topbar {
-            margin-bottom: 35px;
+          .item-actions {
+            grid-column: 2;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+          }
+
+          .quantity-control {
+            margin-bottom: 0;
+          }
+
+          .item-total {
+            margin: 0;
           }
         }
       `}</style>
-
-      <div className="page-topbar">
-        <Link href="/" className="brand">
-          <span>GAMING</span> HUB<span className="brand-dot">.</span>
-        </Link>
-
-        <div className="top-actions">
-          <Link href="/products" className="back-link">
-            ← Continue Shopping
-          </Link>
-
-          <Link href="/wishlist" className="back-link">
-            ❤️ Wishlist
-          </Link>
-        </div>
-      </div>
-
-      <section className="cart-container">
-
-        <span className="eyebrow">YOUR GAMING COLLECTION</span>
-
-        <h1 className="page-title">
-          My Shopping Cart<span className="brand-dot">.</span>
-        </h1>
-
-        <p className="page-description">
-          Review your selected gaming products.
-        </p>
-
-        {cartItems.length === 0 ? (
-          <div className="empty-cart">
-            <div className="empty-cart-icon">🛒</div>
-
-            <h2>Your Cart is Empty</h2>
-
-            <p>
-              Looks like you haven't added any gaming products yet.
-            </p>
-
-            <Link href="/products" className="primary-button">
-              Explore Products ↗
-            </Link>
-          </div>
-        ) : (
-          <div className="cart-layout">
-
-            <div className="cart-items">
-              {cartItems.map((product) => (
-                <article className="cart-item" key={product.id}>
-
-                  <div className="cart-item-icon">
-                    {product.icon}
-                  </div>
-
-                  <div className="cart-item-info">
-                    <p>{product.category}</p>
-
-                    <h3>{product.name}</h3>
-
-                    <div className="cart-item-price">
-                      ₹{product.price.toLocaleString("en-IN")}
-                    </div>
-
-                    <div className="quantity-controls">
-                      <button
-                        onClick={() => decreaseQuantity(product.id)}
-                        aria-label="Decrease quantity"
-                      >
-                        −
-                      </button>
-
-                      <strong>{product.quantity}</strong>
-
-                      <button
-                        onClick={() => increaseQuantity(product.id)}
-                        aria-label="Increase quantity"
-                      >
-                        +
-                      </button>
-                    </div>
-
-                    <button
-                      className="remove-button"
-                      onClick={() => removeProduct(product.id)}
-                    >
-                      Remove Product
-                    </button>
-                  </div>
-
-                </article>
-              ))}
-            </div>
-
-            <aside className="cart-summary">
-              <h2>Order Summary</h2>
-
-              <div className="summary-row">
-                <span>Total Items</span>
-                <strong>{totalItems}</strong>
-              </div>
-
-              <div className="summary-row">
-                <span>Subtotal</span>
-                <strong>₹{total.toLocaleString("en-IN")}</strong>
-              </div>
-
-              <div className="summary-row">
-                <span>Delivery</span>
-                <strong>Free</strong>
-              </div>
-
-              <div className="summary-row summary-total">
-                <span>Total Amount</span>
-                <strong>₹{total.toLocaleString("en-IN")}</strong>
-              </div>
-
-              <button
-                className="checkout-button"
-                onClick={() => router.push("/checkout")}
-              >
-                Proceed to Checkout →
-              </button>
-
-              <button
-                className="clear-button"
-                onClick={clearCart}
-              >
-                Clear Entire Cart
-              </button>
-            </aside>
-
-          </div>
-        )}
-
-      </section>
     </main>
   );
 }
