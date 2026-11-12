@@ -3,6 +3,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type DemoOrder = {
   orderId: string;
@@ -31,31 +32,85 @@ const demoProducts = [
 ];
 
 export default function AdminDashboard() {
+  const router = useRouter();
+  const API_URL =
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api";
+
   const [orders, setOrders] = useState<DemoOrder[]>([]);
   const [customers, setCustomers] = useState(0);
   const [loaded, setLoaded] = useState(false);
+  const [authChecking, setAuthChecking] = useState(true);
+  const [adminName, setAdminName] = useState("Administrator");
 
   useEffect(() => {
-    try {
-      const storedOrders = JSON.parse(
-        localStorage.getItem("gamingHubDemoOrders") || "[]"
-      );
+    let active = true;
 
-      const storedUser = localStorage.getItem("gamingHubUser");
+    async function verifyAdmin() {
+      const token = localStorage.getItem("gamingHubAdminToken");
 
-      const orderList: DemoOrder[] = Array.isArray(storedOrders)
-        ? storedOrders
-        : [];
+      if (!token) {
+        router.replace("/admin/login");
+        setAuthChecking(false);
+        return;
+      }
 
-      setOrders(orderList.reverse());
+      try {
+        const response = await fetch(`${API_URL}/admin/auth/me`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          cache: "no-store",
+        });
 
-      setCustomers(storedUser ? 1 : 0);
-    } catch {
-      setOrders([]);
+        if (!response.ok) {
+          throw new Error("Admin session is invalid or expired.");
+        }
+
+        const data = await response.json();
+
+        if (data.admin?.role !== "admin") {
+          throw new Error("Unauthorized admin account.");
+        }
+
+        if (!active) return;
+
+        setAdminName(data.admin.name || "Administrator");
+        localStorage.setItem("gamingHubAdmin", JSON.stringify(data.admin));
+
+        const storedOrders = JSON.parse(
+          localStorage.getItem("gamingHubDemoOrders") || "[]"
+        );
+        const storedUser = localStorage.getItem("gamingHubUser");
+
+        const orderList: DemoOrder[] = Array.isArray(storedOrders)
+          ? storedOrders
+          : [];
+
+        setOrders([...orderList].reverse());
+        setCustomers(storedUser ? 1 : 0);
+        setLoaded(true);
+      } catch (error) {
+        localStorage.removeItem("gamingHubAdminToken");
+        localStorage.removeItem("gamingHubAdmin");
+        router.replace("/admin/login");
+      } finally {
+        if (active) setAuthChecking(false);
+      }
     }
 
-    setLoaded(true);
-  }, []);
+    verifyAdmin();
+
+    return () => {
+      active = false;
+    };
+  }, [router, API_URL]);
+
+  const handleLogout = () => {
+    localStorage.removeItem("gamingHubAdminToken");
+    localStorage.removeItem("gamingHubAdmin");
+    router.replace("/admin/login");
+  };
 
   const totalRevenue = orders
     .filter((order) => order.status?.toLowerCase() !== "cancelled")
@@ -112,7 +167,9 @@ export default function AdminDashboard() {
 
         <div className="sidebar-bottom">
           <Link href="/">↗ View Website</Link>
-          <Link href="/admin/login">⇥ Admin Login</Link>
+          <button type="button" className="sidebar-logout" onClick={handleLogout}>
+            ⇥ Logout
+          </button>
         </div>
       </aside>
 
@@ -123,13 +180,25 @@ export default function AdminDashboard() {
             <p>Welcome to your Gaming Hub administration panel.</p>
           </div>
 
-          <div className="admin-badge">
-            <span>🛡️</span>
-            Administrator
+          <div className="admin-actions">
+            <div className="admin-badge">
+              <span>🛡️</span>
+              <div>
+                <strong>{adminName}</strong>
+                <small>Administrator</small>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="logout-button"
+              onClick={handleLogout}
+            >
+              ⇥ Logout
+            </button>
           </div>
         </header>
 
-        {!loaded ? (
+        {authChecking || !loaded ? (
           <div className="loading">Loading dashboard...</div>
         ) : (
           <>
@@ -389,8 +458,26 @@ export default function AdminDashboard() {
           margin-top: auto;
         }
 
-        .sidebar-bottom a {
+        .sidebar-bottom a,
+        .sidebar-logout {
           border: 1px solid #ffffff15;
+        }
+
+        .sidebar-logout {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 13px;
+          border-radius: 9px;
+          background: transparent;
+          color: #f87171;
+          font-size: 14px;
+          cursor: pointer;
+          text-align: left;
+        }
+
+        .sidebar-logout:hover {
+          background: #ef444415;
         }
 
         .main-content {
@@ -420,13 +507,43 @@ export default function AdminDashboard() {
           margin: 0;
         }
 
+        .admin-actions {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
         .admin-badge {
+          display: flex;
+          align-items: center;
+          gap: 10px;
           padding: 11px 16px;
           border: 1px solid #00d9ff55;
           border-radius: 9px;
           color: #00eaff;
           background: #102538;
           font-size: 13px;
+        }
+
+        .admin-badge small {
+          display: block;
+          color: #8fa2bf;
+          font-size: 10px;
+          margin-top: 3px;
+        }
+
+        .logout-button {
+          padding: 11px 16px;
+          border: 1px solid #ef444455;
+          border-radius: 9px;
+          background: #ef444415;
+          color: #f87171;
+          cursor: pointer;
+          font-weight: bold;
+        }
+
+        .logout-button:hover {
+          background: #ef444430;
         }
 
         .stats-grid {
