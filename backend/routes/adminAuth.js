@@ -3,7 +3,7 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const Admin = require("../models/Admin");
-
+const adminAuth = require("../middleware/adminAuth");
 const router = express.Router();
 
 // Admin Login
@@ -64,6 +64,13 @@ router.post("/login", async (req, res) => {
       message: "Server error during admin login."
     });
   }
+});
+// Verify current admin session
+router.get("/me", adminAuth, (req, res) => {
+  res.json({
+    message: "Admin session verified",
+    admin: req.admin
+  });
 });
 
 module.exports = router;
