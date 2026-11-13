@@ -12,31 +12,37 @@ const authRoutes = require("./routes/auth");
 
 const app = express();
 
+// Allowed frontend origins
 const allowedOrigins = [
   "http://localhost:3000",
-  "https://gaming-hub-login-ruby.vercel.app"
+  "https://gaming-hub-login-ruby.vercel.app",
+  "https://gaming-hub-git-main-prath-stackguru.vercel.app",
 ];
 
-app.use(cors({
+// CORS configuration
+const corsOptions = {
   origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS: " + origin));
+      return callback(null, true);
     }
+
+    return callback(new Error("Not allowed by CORS"));
   },
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true
-}));
+};
 
-app.options(/.*/, cors());
+app.use(cors(corsOptions));
 
+// Parse JSON
 app.use(express.json());
+
+// API routes
 app.use("/api/admin/auth", adminAuthRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/auth", authRoutes);
 
+// Health check
 app.get("/", (req, res) => {
   res.send("Gaming Hub API is running!");
 });
@@ -45,6 +51,7 @@ app.get("/api/health", (req, res) => {
   res.json({ message: "Gaming Hub API is running" });
 });
 
+// Start server
 async function startServer() {
   try {
     if (!process.env.MONGODB_URI || !process.env.JWT_SECRET) {
@@ -58,9 +65,8 @@ async function startServer() {
     const port = process.env.PORT || 5001;
 
     app.listen(port, () => {
-      console.log(`Backend running at http://localhost:${port}`);
+      console.log(`Backend running on port ${port}`);
     });
-
   } catch (error) {
     console.error("Startup failed:", error.message);
     process.exit(1);
@@ -68,4 +74,3 @@ async function startServer() {
 }
 
 startServer();
-
