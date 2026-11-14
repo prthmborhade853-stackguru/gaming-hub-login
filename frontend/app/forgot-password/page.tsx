@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -16,7 +15,7 @@ export default function ForgotPasswordPage() {
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [verificationToken, setVerificationToken] = useState("");
+  const [resetToken, setResetToken] = useState("");
 
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -100,11 +99,12 @@ export default function ForgotPasswordPage() {
         throw new Error(data.message || "OTP verification failed.");
       }
 
-      if (!data.verificationToken) {
-        throw new Error("Verification token was not received.");
+      // Backend returns resetToken (not verificationToken).
+      if (!data.resetToken) {
+        throw new Error("Reset token was not received.");
       }
 
-      setVerificationToken(data.verificationToken);
+      setResetToken(data.resetToken);
       setStage("password");
       setMessage("Email verified successfully.");
     } catch (err) {
@@ -116,19 +116,23 @@ export default function ForgotPasswordPage() {
     }
   }
 
-  async function resetPassword(
-    event: React.FormEvent<HTMLFormElement>
-  ) {
+  async function resetPassword(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     clearMessages();
 
-    if (newPassword.length < 8) {
-      setError("Password must contain at least 8 characters.");
+    if (newPassword.length < 8 || newPassword.length > 72) {
+      setError("Password must contain between 8 and 72 characters.");
       return;
     }
 
     if (newPassword !== confirmPassword) {
       setError("Passwords do not match.");
+      return;
+    }
+
+    if (!resetToken) {
+      setError("Your verification session is missing. Please verify your OTP again.");
+      setStage("email");
       return;
     }
 
@@ -138,10 +142,11 @@ export default function ForgotPasswordPage() {
       const response = await fetch(`${API}/auth/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        // Backend expects resetToken (not verificationToken).
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
           newPassword,
-          verificationToken,
+          resetToken,
         }),
       });
 
@@ -202,7 +207,6 @@ export default function ForgotPasswordPage() {
             }}
           >
             <label htmlFor="email">Registered Email Address</label>
-
             <input
               id="email"
               type="email"
@@ -212,7 +216,6 @@ export default function ForgotPasswordPage() {
               autoComplete="email"
               required
             />
-
             <button type="submit" disabled={loading}>
               {loading ? "Sending OTP..." : "Send Verification OTP →"}
             </button>
@@ -222,7 +225,6 @@ export default function ForgotPasswordPage() {
         {stage === "otp" && (
           <div className="form-area">
             <label htmlFor="otp">Enter 6-Digit OTP</label>
-
             <input
               id="otp"
               type="text"
@@ -236,11 +238,7 @@ export default function ForgotPasswordPage() {
               autoComplete="one-time-code"
             />
 
-            <button
-              type="button"
-              onClick={verifyOtp}
-              disabled={loading}
-            >
+            <button type="button" onClick={verifyOtp} disabled={loading}>
               {loading ? "Verifying..." : "Verify OTP →"}
             </button>
 
@@ -250,9 +248,7 @@ export default function ForgotPasswordPage() {
               onClick={sendOtp}
               disabled={loading || countdown > 0}
             >
-              {countdown > 0
-                ? `Resend OTP in ${countdown}s`
-                : "Resend OTP"}
+              {countdown > 0 ? `Resend OTP in ${countdown}s` : "Resend OTP"}
             </button>
 
             <button
@@ -261,6 +257,7 @@ export default function ForgotPasswordPage() {
               onClick={() => {
                 setStage("email");
                 setOtp("");
+                setResetToken("");
                 clearMessages();
               }}
             >
@@ -272,7 +269,6 @@ export default function ForgotPasswordPage() {
         {stage === "password" && (
           <form onSubmit={resetPassword}>
             <label htmlFor="newPassword">New Password</label>
-
             <input
               id="newPassword"
               type="password"
@@ -281,11 +277,11 @@ export default function ForgotPasswordPage() {
               onChange={(event) => setNewPassword(event.target.value)}
               autoComplete="new-password"
               minLength={8}
+              maxLength={72}
               required
             />
 
             <label htmlFor="confirmPassword">Confirm New Password</label>
-
             <input
               id="confirmPassword"
               type="password"
@@ -294,6 +290,7 @@ export default function ForgotPasswordPage() {
               onChange={(event) => setConfirmPassword(event.target.value)}
               autoComplete="new-password"
               minLength={8}
+              maxLength={72}
               required
             />
 
